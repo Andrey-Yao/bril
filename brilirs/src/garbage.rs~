@@ -1,0 +1,58 @@
+use fxhash::FxHashMap;
+
+struct Collector{
+    //Map from pointer base address to count
+    total_counter: FxHashMap<usize, i32>,
+    //Counters for this function
+    curr_counter: FxHashMap<usize, i32>
+}
+
+
+impl Default for Collector{
+    fn default() -> Self {
+	Self {
+	    total_counter: FxHashMap::with_capacity_and_hasher(20, fxhash::FxBuildHasher::default()),
+	    curr_counter: FxHashMap::with_capacity_and_hasher(20, fxhash::FxBuildHasher::default()),
+	}
+    }
+}
+
+
+impl Collector{
+    fn increment(&mut self, address) -> {
+	let total = self.total_counter.get(address).unwrap_or(0);
+	let curr = self.curr_counter.get(address).unwrap_or(0);
+	self.total_counter.insert(var, total);
+	self.curr_counter.insert(var, curr);
+    }
+
+    /* Resets collector to previous state */
+    fn reset(&mut self) -> Vec<i32>{
+	let garbo :Vec<i32> = vec![];
+	for (key, val) in self.curr_counter.iter(){
+	    let total = self.total_counter.get(address).unwrap(key);
+	    let total_new = total - val;
+	    if(total_new <= 0){
+		garbo.push(total_new);
+	    }
+	}
+	garbo
+    }
+}
+
+
+/*
+Ok so this is the workflow:
+
+For each function,
+
+    Save the existing counter map as M0
+
+    Right after it is called, for each pointer argument increment the counter
+
+    for each instruction in function:
+        Initialize the counter to 1 for address A right after executing alloc
+        If it is id or ptrAdd, increment the counter of the base address.
+
+    Right before a function exits, reset to M0. For every address 
+*/

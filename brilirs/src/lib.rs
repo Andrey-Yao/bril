@@ -15,6 +15,9 @@ pub mod basic_block;
 pub mod check;
 #[doc(hidden)]
 pub mod cli;
+
+pub mod garbage;
+
 mod error;
 /// Provides ```interp::execute_main``` to execute [Program] that have been converted into [BBProgram]
 pub mod interp;

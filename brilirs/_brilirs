@@ -1,0 +1,40 @@
+#compdef brilirs
+
+autoload -U is-at-least
+
+_brilirs() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" \
+'-f+[The bril file to run. stdin is assumed if file is not provided]:FILE: ' \
+'--file=[The bril file to run. stdin is assumed if file is not provided]:FILE: ' \
+'-h[Print help information]' \
+'--help[Print help information]' \
+'-V[Print version information]' \
+'--version[Print version information]' \
+'-p[Flag to output the total number of dynamic instructions]' \
+'--profile[Flag to output the total number of dynamic instructions]' \
+'-c[Flag to only typecheck/validate the bril program]' \
+'--check[Flag to only typecheck/validate the bril program]' \
+'-t[Flag for when the bril program is in text form]' \
+'--text[Flag for when the bril program is in text form]' \
+'*::args -- Arguments for the main function:' \
+&& ret=0
+}
+
+(( $+functions[_brilirs_commands] )) ||
+_brilirs_commands() {
+    local commands; commands=()
+    _describe -t commands 'brilirs commands' commands "$@"
+}
+
+_brilirs "$@"
