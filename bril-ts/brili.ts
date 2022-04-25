@@ -304,6 +304,9 @@ type State = {
   // For profiling: a total count of the number of instructions executed.
   icount: bigint,
 
+  // For tracing JIT, keeping track of how many more instructions to trace
+  traceremaining: bigint,
+
   // For SSA (phi-node) execution: keep track of recently-seen labels.j
   curlabel: string | null,
   lastlabel: string | null,
@@ -351,6 +354,7 @@ function evalCall(instr: bril.Operation, state: State): Action {
     heap: state.heap,
     funcs: state.funcs,
     icount: state.icount,
+    traceremaining: state.traceremaining,
     lastlabel: null,
     curlabel: null,
     specparent: null,  // Speculation not allowed.
@@ -397,8 +401,52 @@ function evalCall(instr: bril.Operation, state: State): Action {
  * environment. If the instruction branches to a new label, return that label;
  * otherwise, return "next" to indicate that we should proceed to the next
  * instruction or "end" to terminate the function.
+ * pos is kth instruction in the function
  */
-function evalInstr(instr: bril.Instruction, state: State): Action {
+function evalInstr(instr: bril.Instruction, state: State, pos: number): Action {
+
+    if(state.traceremaining > 0){
+	if(instr.op === "br"){
+	    let cond = getBool(instr, state.env, 0);
+	    let guard_args : string[] | undefined = [] as string[];
+	    if (cond) {
+		guard_args = instr.args
+	    } else {
+		//Fresh var to put in guard
+		let fresh_var: string = "temp_cond_hehe_" + state.icount;
+		let instr_neg: bril.Instruction = {
+		    op: "not",
+		    type: "bool",
+		    args: instr.args,
+		    dest: fresh_var
+		};
+		console.error(JSON.stringify(instr_neg));
+		guard_args = [fresh_var];
+	    }
+	    let instr_guard: bril.Instruction = {
+		op: "guard",
+		args: guard_args,
+		labels: ["speculate-fail"]
+	    };
+	    console.error(JSON.stringify(instr_guard));
+	} else if (instr.op === "jmp") {
+	    //do nothing
+	} else if(
+	    instr.op === "call" || instr.op === "free" || instr.op === "alloc" ||
+		instr.op === "print" || instr.op === "store" || instr.op === "ret") {
+	    // Stop tracing when encountering unsupported instruction
+	    // And prints the pos of instruction in main()
+	    state.traceremaining = BigInt(0);
+	    console.error(pos);
+	} else {
+	    state.traceremaining -= BigInt(1);
+	    console.error(JSON.stringify(instr));
+	    if(state.traceremaining === BigInt(0)){
+		console.error(pos + 1);
+	    }
+	}
+    }
+    
   state.icount += BigInt(1);
 
   // Check that we have the right number of arguments.
@@ -709,7 +757,7 @@ function evalFunc(func: bril.Function, state: State): Value | null {
     let line = func.instrs[i];
     if ('op' in line) {
       // Run an instruction.
-      let action = evalInstr(line, state);
+      let action = evalInstr(line, state, i);
 
       // Take the prescribed action.
       switch (action.action) {
@@ -840,6 +888,7 @@ function evalProg(prog: bril.Program) {
     heap,
     env: newEnv,
     icount: BigInt(0),
+    traceremaining: BigInt(2000),
     lastlabel: null,
     curlabel: null,
     specparent: null,
